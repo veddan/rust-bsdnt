@@ -380,9 +380,19 @@ mod test {
       x.clone_from(&y);
       assert!(x == y);
     }
+    
+    #[test]
+    fn test_clone() {
+      let mut x: Bsdnt = from_str("-31232313").unwrap();
+      let y = x.clone();
+      let z: Bsdnt = from_str("3000").unwrap();
+      assert!(x == y);
+      x = x + z;
+      assert!(x != y);
+    }
 
     #[test]
-    fn test_from_str() {
+    fn test_from_str_valid() {
       let x: Bsdnt = FromPrimitive::from_i64(4000).unwrap();
       let y: Bsdnt = FromPrimitive::from_i64(-19000).unwrap();
       let xi: Bsdnt = from_str("4000").unwrap();
@@ -475,9 +485,9 @@ mod test {
 
     #[test]
     fn test_gcd() {
-      let x: Bsdnt = FromPrimitive::from_i64(54).unwrap();
-      let y: Bsdnt = FromPrimitive::from_i64(24).unwrap();
-      assert!(x.gcd(&y) == FromPrimitive::from_i64(6).unwrap());
+      let x: Bsdnt = FromPrimitive::from_i64(163231).unwrap();
+      let y: Bsdnt = FromPrimitive::from_i64(135749).unwrap();
+      assert!(x.gcd(&y) == FromPrimitive::from_i64(151).unwrap());
     }
 
     #[test]
