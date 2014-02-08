@@ -6,6 +6,7 @@ install:
   - git clone https://github.com/wbhart/bsdnt.git
   - cd bsdnt
   - git checkout origin/v1.0
+  - ./configure
   - make
   - sudo make install
   - cd ..
