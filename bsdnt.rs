@@ -323,37 +323,22 @@ impl FromStr for Bsdnt {
     }
 }
 
-#[cfg(target_word_size = "64")]
-fn from_i64(n: i64) -> Option<Bsdnt> {
-    let mut res = Bsdnt::new();
-    unsafe { zz_seti(&mut res.zz, n as sword_t); }
-    Some(res)
-}
+macro_rules! from_primitive(
+    ($int_ty:ident $val:expr) => (
+        std::$int_ty::to_str_bytes($val, 10, |buf| {
+            unsafe {
+                // `std::str::raw::from_utf8` doesn't inline, use `transmute` instead
+                let s = std::cast::transmute(buf);
+                FromStr::from_str(s)
+            }
+        })
+    )
+)
 
-#[cfg(target_word_size = "64")]
 impl FromPrimitive for Bsdnt {
-    fn from_i64(n: i64) -> Option<Bsdnt> { from_i64(n) }
+    fn from_i64(n: i64) -> Option<Bsdnt> { from_primitive!(i64 n) }
 
-    // TODO Do this properly, allocating is just silly
-    fn from_u64(n: u64) -> Option<Bsdnt> {
-        unsafe {
-        if n < std::i64::MAX as u64 {
-            let mut res = Bsdnt::new();
-            zz_seti(&mut res.zz, n as sword_t);
-            return Some(res);
-        } else {
-            // Split the overly large number into three parts and add them
-            let a = n / 3;
-            let b = a;
-            let rest = n - (a + b);
-            let tmpa = from_i64(a as sword_t).unwrap();
-            let tmpb = tmpa + from_i64(b as sword_t).unwrap();
-            let mut res = Bsdnt::new();
-            zz_addi(&mut res.zz, &tmpb.zz, rest as sword_t);
-            return Some(res);
-        }
-        }
-    }
+    fn from_u64(n: u64) -> Option<Bsdnt> { from_primitive!(u64 n) }
 }
 
 impl Clone for Bsdnt {
