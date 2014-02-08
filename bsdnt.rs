@@ -275,7 +275,10 @@ impl Integer for Bsdnt {
         !other.is_zero() && (*self % *other).is_zero()
     }
 
-    fn is_even(&self) -> bool { unsafe { nn_bit_test(*(&self.zz.n) as nn_src_t, 0) == 0 } }
+    fn is_even(&self) -> bool {
+        if self.is_zero() { return true; }
+        unsafe { nn_bit_test(*(&self.zz.n) as nn_src_t, 0) == 0 }
+    }
 
     fn is_odd(&self) -> bool { !self.is_even() }
 }
@@ -303,8 +306,8 @@ impl FromStr for Bsdnt {
     fn from_str(s: &str) -> Option<Bsdnt> {
         if s.len() == 0 { return None; }
         // `zz_set_str` is a bit weird.
-        // It uses only the prefix of `s` matching `\-?[0-9]*` and doesn't report errors.
-        // So we validate ourselved.
+        // It uses only the prefix of `s` matching `\-?[0-9]+` and doesn't report errors.
+        // So we validate ourselves.
         let mut it = s.chars();
         let first = it.next().unwrap();  // We know it's not empty
         if first != '-' && !first.is_digit() { return None; }
@@ -463,11 +466,15 @@ mod test {
         let z: Bsdnt = from_str("-8").unwrap();
         let p: Bsdnt = from_str("-9").unwrap();
         let q: Bsdnt = from_str("0").unwrap();
+        let r: Bsdnt = from_str("18446744073709551615123213139").unwrap();
+        let s: Bsdnt = from_str("184467440737095516151232131392").unwrap();
         assert!(x.is_even());
         assert!(y.is_odd());
         assert!(z.is_even());
         assert!(p.is_odd());
         assert!(q.is_even());
+        assert!(r.is_odd());
+        assert!(s.is_even());
     }
 
     #[test]
@@ -519,6 +526,26 @@ mod test {
         assert!(a == x.to_str());
         assert!(b == y.to_str());
         assert!(c == z.to_str());
+    }
+
+    #[test]
+    fn test_from_primitive() {
+        let a: i64 = 9223372036854775807;
+        let b = "9223372036854775807";
+        let x: Bsdnt = FromPrimitive::from_i64(a).unwrap();
+        let y: Bsdnt = from_str(b).unwrap();
+        assert!(x == y);
+        assert!(b == x.to_str());
+    }
+
+    #[test]
+    fn test_from_u64() {
+        let a: u64 = 18446744073709551615;
+        let b = "18446744073709551615";
+        let x: Bsdnt = FromPrimitive::from_u64(a).unwrap();
+        let y: Bsdnt = from_str(b).unwrap();
+        assert!(x == y);
+        assert!(b == x.to_str());
     }
 }
 
