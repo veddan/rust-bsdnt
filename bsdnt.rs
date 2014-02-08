@@ -2,7 +2,6 @@
 #[feature(globs)];
 
 use std::libc::{c_void, c_char, size_t, c_long, c_int};
-use std::{cmp, num};
 use std::num::{One, Zero};
 
 #[cfg(target_word_size = "32")]
@@ -42,7 +41,6 @@ extern "C" {
     fn zz_init_fit(r: zz_ptr, m: len_t);
     fn zz_clear(r: zz_ptr);
     fn zz_fit(r: zz_ptr, m: len_t);
-    fn zz_normalize(r: zz_ptr);
 
     fn zz_equali(r: zz_srcptr, c: sword_t) -> c_int;
     fn zz_cmpi(a: zz_srcptr, b: sword_t) -> c_int;
@@ -102,7 +100,7 @@ impl Drop for Bsdnt {
 }
 
 impl Bsdnt {
-    fn new() -> Bsdnt {
+    pub fn new() -> Bsdnt {
         unsafe {
             let mut zz = std::unstable::intrinsics::uninit();
             zz_init(&mut zz);
@@ -110,7 +108,7 @@ impl Bsdnt {
         }
     }
 
-    fn new_reserve(words: uint) -> Bsdnt {
+    pub fn new_reserve(words: uint) -> Bsdnt {
         unsafe {
             let mut zz = std::unstable::intrinsics::uninit();
             zz_init_fit(&mut zz, words as len_t);
@@ -118,7 +116,9 @@ impl Bsdnt {
         }
     }
 
-    fn reserve(&mut self, words: uint) { unsafe { zz_fit(&mut self.zz, words as len_t); } }
+    pub fn reserve(&mut self, words: uint) {
+        unsafe { zz_fit(&mut self.zz, words as len_t); }
+    }
 
 }
 
@@ -252,9 +252,9 @@ impl Integer for Bsdnt {
 
     fn div_floor(&self, other: &Bsdnt) -> Bsdnt { binop_new!(self other zz_div) }
 
-    fn mod_floor(&self, other :&Bsdnt) -> Bsdnt { fail!("TODO mod_floor"); }
+    fn mod_floor(&self, _other :&Bsdnt) -> Bsdnt { fail!("TODO mod_floor"); }
 
-    fn div_mod_floor(&self, other :&Bsdnt) -> (Bsdnt, Bsdnt) { fail!("TODO div_mod_floor"); }
+    fn div_mod_floor(&self, _other :&Bsdnt) -> (Bsdnt, Bsdnt) { fail!("TODO div_mod_floor"); }
 
     fn lcm(&self, other :&Bsdnt) -> Bsdnt {
         unsafe {
@@ -269,7 +269,7 @@ impl Integer for Bsdnt {
         }
     }
 
-    fn mod_floor(&self, other :&Bsdnt) -> Bsdnt { fail!("TODO mod_floor"); }
+    fn mod_floor(&self, _other :&Bsdnt) -> Bsdnt { fail!("TODO mod_floor"); }
 
     fn is_multiple_of(&self, other: &Bsdnt) -> bool {
         !other.is_zero() && (*self % *other).is_zero()
