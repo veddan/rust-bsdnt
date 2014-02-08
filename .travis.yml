@@ -3,8 +3,8 @@ before_install:
   - sudo apt-get update
 install:
   - sudo apt-get install rust-nightly
-  - git clone https://github.com/wbhart/bsdnt.git
-  - cd bsdnt
+  - git clone https://github.com/wbhart/bsdnt.git bsdnt-git
+  - cd bsdnt-git
   - git checkout origin/v1.0
   - ./configure
   - make
