@@ -86,9 +86,9 @@ unsafe fn zz_equal(a: zz_srcptr, b: zz_srcptr) -> bool {
 macro_rules! binop_new(
     ($a:expr $b:expr $fun:expr) => (
         unsafe {
-        let mut res = Bsdnt::new();
-        $fun(&mut res.zz, &$a.zz, &$b.zz);
-        res
+            let mut res = Bsdnt::new();
+            $fun(&mut res.zz, &$a.zz, &$b.zz);
+            res
         }
     );
 )
@@ -104,17 +104,17 @@ impl Drop for Bsdnt {
 impl Bsdnt {
     fn new() -> Bsdnt {
         unsafe {
-        let mut zz = std::unstable::intrinsics::uninit();
-        zz_init(&mut zz);
-        Bsdnt { zz: zz }
+            let mut zz = std::unstable::intrinsics::uninit();
+            zz_init(&mut zz);
+            Bsdnt { zz: zz }
         }
     }
 
     fn new_reserve(words: uint) -> Bsdnt {
         unsafe {
-        let mut zz = std::unstable::intrinsics::uninit();
-        zz_init_fit(&mut zz, words as len_t);
-        Bsdnt { zz: zz }
+            let mut zz = std::unstable::intrinsics::uninit();
+            zz_init_fit(&mut zz, words as len_t);
+            Bsdnt { zz: zz }
         }
     }
 
@@ -172,9 +172,9 @@ impl Div<Bsdnt, Bsdnt> for Bsdnt {
 impl Neg<Bsdnt> for Bsdnt {
     fn neg(&self) -> Bsdnt {
         unsafe {
-        let mut res = Bsdnt::new_reserve(self.zz.size as uint);
-        zz_neg(&mut res.zz, &self.zz);
-        res
+            let mut res = Bsdnt::new_reserve(self.zz.size as uint);
+            zz_neg(&mut res.zz, &self.zz);
+            res
         }
     }
 }
@@ -192,31 +192,31 @@ impl Num for Bsdnt { }
 impl Signed for Bsdnt {
     fn abs(&self) -> Bsdnt {
         unsafe {
-        if zz_cmpi(&self.zz, 0) >= 0 {
-            self.clone()
-        } else {
-            -self
-        }
+            if zz_cmpi(&self.zz, 0) >= 0 {
+                self.clone()
+            } else {
+                -self
+            }
         }
     }
 
     fn signum(&self) -> Bsdnt {
         let c = unsafe { zz_cmpi(&self.zz, 0) };
         if c < 0 {
-        FromPrimitive::from_int(-1)
+            FromPrimitive::from_int(-1)
         } else if c == 0 {
-        FromPrimitive::from_int(0)
+            FromPrimitive::from_int(0)
         } else {
-        FromPrimitive::from_int(1)
+            FromPrimitive::from_int(1)
         }.unwrap()
     }
 
     fn is_positive(&self) -> bool {
-         unsafe { zz_cmpi(&self.zz, 0) > 0 }
+        unsafe { zz_cmpi(&self.zz, 0) > 0 }
     }
 
     fn is_negative(&self) -> bool {
-         unsafe { zz_cmpi(&self.zz, 0) < 0 }
+        unsafe { zz_cmpi(&self.zz, 0) < 0 }
     }
 
     fn abs_sub(&self, other: &Bsdnt) -> Bsdnt {
@@ -229,10 +229,10 @@ impl ToStr for Bsdnt {
     // This makes an unecessary copy
     fn to_str(&self) -> ~str {
         unsafe {
-        let cstr = zz_get_str(&self.zz);
-        let rstr = std::str::raw::from_c_str(cstr as *c_char);
-        std::libc::free(cstr as *mut c_void);
-        rstr
+            let cstr = zz_get_str(&self.zz);
+            let rstr = std::str::raw::from_c_str(cstr as *c_char);
+            std::libc::free(cstr as *mut c_void);
+            rstr
         }
     }
 }
@@ -243,10 +243,10 @@ impl Integer for Bsdnt {
     fn div_rem(&self, other: &Bsdnt) -> (Bsdnt, Bsdnt) {
         if other.is_zero() { fail!("division by 0"); }
         unsafe {
-        let mut quot = Bsdnt::new();
-        let mut rem = Bsdnt::new();
-        zz_divrem(&mut quot.zz, &mut rem.zz, &self.zz, &other.zz);
-        (quot, rem)
+            let mut quot = Bsdnt::new();
+            let mut rem = Bsdnt::new();
+            zz_divrem(&mut quot.zz, &mut rem.zz, &self.zz, &other.zz);
+            (quot, rem)
         }
     }
 
@@ -258,14 +258,14 @@ impl Integer for Bsdnt {
 
     fn lcm(&self, other :&Bsdnt) -> Bsdnt {
         unsafe {
-        let mut tmpa = self.clone();
-        zz_mul(&mut tmpa.zz, &tmpa.zz, &other.zz);
-        if zz_cmpi(&tmpa.zz, 0) < 0 {
-            zz_neg(&mut tmpa.zz, &tmpa.zz);
-        }
-        let gcd = self.gcd(other);
-        zz_div(&mut tmpa.zz, &tmpa.zz, &gcd.zz);
-        tmpa
+            let mut tmpa = self.clone();
+            zz_mul(&mut tmpa.zz, &tmpa.zz, &other.zz);
+            if zz_cmpi(&tmpa.zz, 0) < 0 {
+                zz_neg(&mut tmpa.zz, &tmpa.zz);
+            }
+            let gcd = self.gcd(other);
+            zz_div(&mut tmpa.zz, &tmpa.zz, &gcd.zz);
+            tmpa
         }
     }
 
@@ -283,9 +283,9 @@ impl Integer for Bsdnt {
 impl One for Bsdnt {
     fn one() -> Bsdnt {
         unsafe {
-        let mut res = Bsdnt::new();
-        zz_seti(&mut res.zz, 1);
-        res
+            let mut res = Bsdnt::new();
+            zz_seti(&mut res.zz, 1);
+            res
         }
     }
 }
@@ -309,12 +309,12 @@ impl FromStr for Bsdnt {
         let first = it.next().unwrap();  // We know it's not empty
         if first != '-' && !first.is_digit() { return None; }
         for c in it {
-        if !c.is_digit() { return None; }
+            if !c.is_digit() { return None; }
         }
 
         let mut ret = Bsdnt::new();
         unsafe {
-        s.with_c_str(|cs| { zz_set_str(&mut ret.zz, cs) });
+            s.with_c_str(|cs| { zz_set_str(&mut ret.zz, cs) });
         }
         return Some(ret);
     }
@@ -356,9 +356,9 @@ impl FromPrimitive for Bsdnt {
 impl Clone for Bsdnt {
     fn clone(&self) -> Bsdnt {
         unsafe {
-        let mut ret = Bsdnt::new();
-        zz_set(&mut ret.zz, &self.zz);
-        ret
+            let mut ret = Bsdnt::new();
+            zz_set(&mut ret.zz, &self.zz);
+            ret
         }
     }
 
