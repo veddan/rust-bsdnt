@@ -220,7 +220,7 @@ impl Signed for Bsdnt {
     }
 
     fn abs_sub(&self, other: &Bsdnt) -> Bsdnt {
-        if self < other { return Zero::zero(); }
+        if self <= other { return Zero::zero(); }
         *self - *other
     }
 }
