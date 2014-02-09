@@ -1,5 +1,6 @@
 #[feature(macro_rules)];
 #[feature(globs)];
+#[feature(asm)];
 
 use std::libc::{c_void, c_char, size_t, c_long, c_int};
 use std::num::{One, Zero};
@@ -304,15 +305,17 @@ impl Zero for Bsdnt {
 
 impl FromStr for Bsdnt {
     fn from_str(s: &str) -> Option<Bsdnt> {
+        fn is_digit(c: &u8) -> bool { c >= &('0' as u8) && c <= &('9' as u8) }
+
         if s.len() == 0 { return None; }
         // `zz_set_str` is a bit weird.
         // It uses only the prefix of `s` matching `\-?[0-9]+` and doesn't report errors.
         // So we validate ourselves.
-        let mut it = s.chars();
+        let mut it = s.as_bytes().iter();
         let first = it.next().unwrap();  // We know it's not empty
-        if first != '-' && !first.is_digit() { return None; }
+        if first != &('-' as u8) && !is_digit(first) { return None; }
         for c in it {
-            if !c.is_digit() { return None; }
+            if !is_digit(c) { return None; }
         }
 
         let mut ret = Bsdnt::new();
@@ -542,6 +545,16 @@ mod bench {
     use std::iter::range_inclusive;
     use std::num::{One};
 
+    static bignum: &'static str = "347329483248324987312897398216945234732489236493274398127428913\
+                                   382190389201839813919208390218903821093219038213128074395657862\
+                                   321832190873902183092183092183902810974012743284732894723894790\
+                                   312381290389201389021839021803821903892018437549835743897589347\
+                                   43289483290489302849032753298573458943758974358974398578943759";
+
+    fn black_box<T>(dummy: T) {
+        unsafe { asm!("" : : "r"(&dummy)) }
+    }
+
     fn factorial<T: Integer+FromPrimitive>(n: uint) -> T {
         let mut f: T = One::one();
         for i in range_inclusive(1, n) {
@@ -557,13 +570,16 @@ mod bench {
 
     #[bench]
     fn bench_gcd_big_small(b: &mut extra::test::BenchHarness) {
-        let x: Bsdnt = from_str("34732948324832498731289739821694523473248923649327439812742891323213\
-                                 38219038920183981391920839021890382109321903821312807439565786213821\
-                                 32183219087390218309218309218390281097401274328473289472389479237431\
-                                 31238129038920138902183902180382190389201843754983574389758934758943\
-                                 4328948329048930284903275329857345894375897435897439857894375987345")
-                                .unwrap();
+        let x: Bsdnt = from_str(bignum).unwrap();
         let y: Bsdnt = from_str("19").unwrap();
         b.iter(|| { x.gcd(&y); });
+    }
+
+    #[bench]
+    fn bench_to_str(b: &mut extra::test::BenchHarness) {
+        b.iter(|| {
+            let n = from_str::<Bsdnt>(bignum);
+            black_box(n);
+        });
     }
 }
