@@ -4,6 +4,7 @@
 
 use std::libc::{c_void, c_char, size_t, c_long, c_int};
 use std::num::{One, Zero};
+use std::unstable::intrinsics::{uninit};
 
 #[cfg(target_word_size = "32")]
 type word_t = u32;
@@ -103,7 +104,7 @@ impl Drop for Bsdnt {
 impl Bsdnt {
     pub fn new() -> Bsdnt {
         unsafe {
-            let mut zz = std::unstable::intrinsics::uninit();
+            let mut zz = uninit();
             zz_init(&mut zz);
             Bsdnt { zz: zz }
         }
@@ -111,7 +112,7 @@ impl Bsdnt {
 
     pub fn new_reserve(words: uint) -> Bsdnt {
         unsafe {
-            let mut zz = std::unstable::intrinsics::uninit();
+            let mut zz = uninit();
             zz_init_fit(&mut zz, words as len_t);
             Bsdnt { zz: zz }
         }
@@ -119,6 +120,11 @@ impl Bsdnt {
 
     pub fn reserve(&mut self, words: uint) {
         unsafe { zz_fit(&mut self.zz, words as len_t); }
+    }
+
+    pub fn sgn(&self) -> int {
+        let sgn = unsafe { zz_cmpi(&self.zz, 0) };
+        if sgn > 0 { 1 } else if sgn < 0 { -1  } else { 0 }
     }
 
 }
@@ -165,8 +171,8 @@ impl Mul<Bsdnt, Bsdnt> for Bsdnt {
 
 impl Div<Bsdnt, Bsdnt> for Bsdnt {
     fn div(&self, other: &Bsdnt) -> Bsdnt {
-        if other.is_zero() { fail!("division by 0"); }
-        binop_new!(self other zz_div)
+        let (quot, _) = self.div_rem(other);
+        quot
     }
 }
 
@@ -181,7 +187,6 @@ impl Neg<Bsdnt> for Bsdnt {
 }
 
 impl Rem<Bsdnt, Bsdnt> for Bsdnt {
-    // TODO This is less efficient than it could be, possibly implement with nn_???
     fn rem(&self, other: &Bsdnt) -> Bsdnt {
         let (_, rem) = self.div_rem(other);
         rem
@@ -202,14 +207,7 @@ impl Signed for Bsdnt {
     }
 
     fn signum(&self) -> Bsdnt {
-        let c = unsafe { zz_cmpi(&self.zz, 0) };
-        if c < 0 {
-            FromPrimitive::from_int(-1)
-        } else if c == 0 {
-            FromPrimitive::from_int(0)
-        } else {
-            FromPrimitive::from_int(1)
-        }.unwrap()
+        FromPrimitive::from_int(self.sgn()).unwrap()
     }
 
     fn is_positive(&self) -> bool {
@@ -221,8 +219,11 @@ impl Signed for Bsdnt {
     }
 
     fn abs_sub(&self, other: &Bsdnt) -> Bsdnt {
-        if self <= other { return Zero::zero(); }
-        *self - *other
+        if self <= other {
+            Zero::zero()
+        } else {
+            *self - *other
+        }
     }
 }
 
@@ -242,6 +243,31 @@ impl Integer for Bsdnt {
     fn gcd(&self, other: &Bsdnt) -> Bsdnt { binop_new!(self other zz_gcd) }
 
     fn div_rem(&self, other: &Bsdnt) -> (Bsdnt, Bsdnt) {
+        let (mut quot, mut rem) = self.div_mod_floor(other);
+        unsafe {
+            // Need to convert from floored to truncated division
+            let quot_sgn = quot.sgn();
+            if quot_sgn < 0 && !rem.is_zero() {
+                zz_addi(&mut quot.zz, &quot.zz, 1);
+            }
+            if quot_sgn < 0 {
+                zz_sub(&mut rem.zz, &rem.zz, &other.zz);
+            }
+        }
+        (quot, rem)
+    }
+
+    fn div_floor(&self, other: &Bsdnt) -> Bsdnt {
+        if other.is_zero() { fail!("division by 0"); }
+        binop_new!(self other zz_div)
+    }
+
+    fn mod_floor(&self, other :&Bsdnt) -> Bsdnt {
+        let (_, rem) = self.div_mod_floor(other);
+        rem
+    }
+
+    fn div_mod_floor(&self, other :&Bsdnt) -> (Bsdnt, Bsdnt) {
         if other.is_zero() { fail!("division by 0"); }
         unsafe {
             let mut quot = Bsdnt::new();
@@ -250,12 +276,6 @@ impl Integer for Bsdnt {
             (quot, rem)
         }
     }
-
-    fn div_floor(&self, other: &Bsdnt) -> Bsdnt { binop_new!(self other zz_div) }
-
-    fn mod_floor(&self, _other :&Bsdnt) -> Bsdnt { fail!("TODO mod_floor"); }
-
-    fn div_mod_floor(&self, _other :&Bsdnt) -> (Bsdnt, Bsdnt) { fail!("TODO div_mod_floor"); }
 
     fn lcm(&self, other :&Bsdnt) -> Bsdnt {
         unsafe {
@@ -269,8 +289,6 @@ impl Integer for Bsdnt {
             tmpa
         }
     }
-
-    fn mod_floor(&self, _other :&Bsdnt) -> Bsdnt { fail!("TODO mod_floor"); }
 
     fn is_multiple_of(&self, other: &Bsdnt) -> bool {
         !other.is_zero() && (*self % *other).is_zero()
@@ -363,6 +381,17 @@ mod test {
     use super::*;
     use std::num::{Zero, One};  // Two, Three, ...}
 
+    fn n(n: int) -> Bsdnt { FromPrimitive::from_int(n).unwrap() }
+
+    macro_rules! asserteq(
+        ($actual:expr, $expected:expr, $message:expr) => (
+            if $expected != $actual {
+                fail!("{}: expected `{}`, got `{}`", $message,
+                      $expected.to_str(), $actual.to_str());
+            }
+        )
+    )
+
     #[test]
     fn test_clone_from() {
         let mut x: Bsdnt = FromPrimitive::from_i64(4000).unwrap();
@@ -448,7 +477,7 @@ mod test {
     }
 
     #[test]
-    fn test_even() {
+    fn test_odd_even() {
         let x: Bsdnt = from_str("8").unwrap();
         let y: Bsdnt = from_str("9").unwrap();
         let z: Bsdnt = from_str("-8").unwrap();
@@ -534,6 +563,44 @@ mod test {
         let y: Bsdnt = from_str(b).unwrap();
         assert!(x == y);
         assert!(b == x.to_str());
+    }
+
+    #[test]
+    fn test_div_rem_floor() {
+        let xs = ~[
+            (n(8),  n(3),  n(2),  n(2)),
+            (n(8),  n(-3), n(-3), n(-1)),
+            (n(-8), n(3),  n(-3), n(1)),
+            (n(-8), n(-3), n(3),  n(3)),
+            (n(1),  n(2),  n(0),  n(1)),
+            (n(1),  n(-2), n(-1), n(-1)),
+            (n(-1), n(2),  n(-1), n(1)),
+            (n(-1), n(-2), n(0),  n(-1)),
+        ];
+        for (div, den, quot, rem) in xs.move_iter() {
+            let expected = (quot, rem);
+            asserteq!(&div.div_rem(&den), &expected,
+                      format!("{} / {}", div.to_str(), den.to_str()));
+        }
+    }
+
+    #[test]
+    fn test_div_rem() {
+        let xs = ~[
+            (n(8),  n(3),  n(2),  n(2)),
+            (n(8),  n(-3), n(-2), n(2)),
+            (n(-8), n(3),  n(-2), n(-2)),
+            (n(-8), n(-3), n(2),  n(-2)),
+            (n(1),  n(2),  n(0),  n(1)),
+            (n(1),  n(-2), n(0),  n(1)),
+            (n(-1), n(2),  n(0),  n(-1)),
+            (n(-1), n(-2), n(0),  n(-1)),
+        ];
+        for (div, den, quot, rem) in xs.move_iter() {
+            let expected = (quot, rem);
+            asserteq!(&div.div_rem(&den), &expected,
+                      format!("{} / {}", div.to_str(), den.to_str()));
+        }
     }
 }
 
