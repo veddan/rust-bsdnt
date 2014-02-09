@@ -8,8 +8,7 @@ install:
   - git checkout origin/v1.0
   - ./configure
   - make
-  - sudo make install
   - cd ..
 script:
-  - rustc bsdnt.rs --test
-  - ./bsdnt --test
+  - rustc bsdnt.rs --test -L bsdnt-git
+  - RUST_THREADS=1 LD_LIBRARY_PATH=bsdnt-git ./bsdnt --test
