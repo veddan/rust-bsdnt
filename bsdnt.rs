@@ -249,8 +249,6 @@ impl Integer for Bsdnt {
             let quot_sgn = quot.sgn();
             if quot_sgn < 0 && !rem.is_zero() {
                 zz_addi(&mut quot.zz, &quot.zz, 1);
-            }
-            if quot_sgn < 0 {
                 zz_sub(&mut rem.zz, &rem.zz, &other.zz);
             }
         }
