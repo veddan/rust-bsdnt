@@ -555,17 +555,19 @@ mod bench {
         unsafe { asm!("" : : "r"(&dummy)) }
     }
 
-    fn factorial<T: Integer+FromPrimitive>(n: uint) -> T {
-        let mut f: T = One::one();
-        for i in range_inclusive(1, n) {
-            f = f * FromPrimitive::from_uint(i).unwrap();
-        }
-        f
-    }
-
     #[bench]
-    fn bench_factorial100(b: &mut extra::test::BenchHarness) {
-        b.iter(|| { factorial::<Bsdnt>(100); });
+    fn bench_factorial150(b: &mut extra::test::BenchHarness) {
+        let mut nums: ~[Bsdnt] = ~[];
+        for i in range_inclusive(1, 150) {
+            nums.push(FromPrimitive::from_int(i).unwrap());
+        }
+        b.iter(|| {
+            let mut res: Bsdnt = One::one();
+            for n in nums.iter() {
+                res = res * *n;
+            }
+            black_box(res);
+        });
     }
 
     #[bench]
@@ -576,7 +578,7 @@ mod bench {
     }
 
     #[bench]
-    fn bench_to_str(b: &mut extra::test::BenchHarness) {
+    fn bench_from_str(b: &mut extra::test::BenchHarness) {
         b.iter(|| {
             let n = from_str::<Bsdnt>(bignum);
             black_box(n);
