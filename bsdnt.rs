@@ -37,6 +37,8 @@ type zz_srcptr = *zz_struct;
 
 #[link(name = "bsdnt")]
 extern "C" {
+    #[allow(dead_code)];
+
     fn nn_cmp_m(a: nn_src_t, b: nn_src_t, m: len_t) -> c_int;
 
     fn zz_init(r: zz_ptr);
@@ -228,7 +230,6 @@ impl Signed for Bsdnt {
 }
 
 impl ToStr for Bsdnt {
-    // This makes an unecessary copy
     fn to_str(&self) -> ~str {
         unsafe {
             let cstr = zz_get_str(&self.zz);
@@ -563,13 +564,13 @@ mod test {
         assert!(b == x.to_str());
     }
 
-    #[test]
+    #[test]  // Fails due to bug in BSDNT (https://github.com/wbhart/bsdnt/issues/10)
     fn test_div_rem_floor() {
         let xs = ~[
             (n(8),  n(3),  n(2),  n(2)),
             (n(8),  n(-3), n(-3), n(-1)),
             (n(-8), n(3),  n(-3), n(1)),
-            (n(-8), n(-3), n(3),  n(3)),
+            (n(-8), n(-3), n(2),  n(-2)),
             (n(1),  n(2),  n(0),  n(1)),
             (n(1),  n(-2), n(-1), n(-1)),
             (n(-1), n(2),  n(-1), n(1)),
@@ -639,7 +640,14 @@ mod bench {
     fn bench_gcd_big_small(b: &mut extra::test::BenchHarness) {
         let x: Bsdnt = from_str(bignum).unwrap();
         let y: Bsdnt = from_str("19").unwrap();
-        b.iter(|| { x.gcd(&y); });
+        b.iter(|| { black_box(x.gcd(&y)); });
+    }
+
+    #[bench]
+    fn bench_lcm_big_small(b: &mut extra::test::BenchHarness) {
+        let x: Bsdnt = from_str(bignum).unwrap();
+        let y: Bsdnt = from_str("19").unwrap();
+        b.iter(|| { black_box(x.lcm(&y)); });
     }
 
     #[bench]
