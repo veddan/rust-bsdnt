@@ -232,8 +232,7 @@ impl Integer for Bsdnt {
         let (mut quot, mut rem) = self.div_mod_floor(other);
         unsafe {
             // Need to convert from floored to truncated division
-            let quot_sgn = quot.sgn();
-            if quot_sgn < 0 && !rem.is_zero() {
+            if quot.sgn() < 0 && !rem.is_zero() {
                 zz_addi(&mut quot.zz, &quot.zz, 1);
                 zz_sub(&mut rem.zz, &rem.zz, &other.zz);
             }
@@ -366,6 +365,7 @@ mod test {
     use std::num::{Zero, One};  // Two, Three, ...}
 
     fn n(n: int) -> Bsdnt { FromPrimitive::from_int(n).unwrap() }
+    fn s(s: &str) -> Bsdnt { from_str(s).unwrap() }
 
     macro_rules! asserteq(
         ($actual:expr, $expected:expr, $message:expr) => (
@@ -579,6 +579,7 @@ mod test {
             (n(1),  n(-2), n(0),  n(1)),
             (n(-1), n(2),  n(0),  n(-1)),
             (n(-1), n(-2), n(0),  n(-1)),
+            (s("18446744073709551617"), n(-0x100000), n(-17592186044416),n(1))
         ];
         for (div, den, quot, rem) in xs.move_iter() {
             let expected = (quot, rem);
@@ -602,44 +603,49 @@ mod bench {
                                    312381290389201389021839021803821903892018437549835743897589347\
                                    43289483290489302849032753298573458943758974358974398578943759";
 
-    fn black_box<T>(dummy: T) {
-        unsafe { asm!("" : : "r"(&dummy)) }
-    }
-
-    #[bench]
-    fn bench_factorial150(b: &mut extra::test::BenchHarness) {
+    fn do_bench_fac(n: uint, b: &mut extra::test::BenchHarness) {
         let mut nums: ~[Bsdnt] = ~[];
-        for i in range_inclusive(1, 150) {
-            nums.push(FromPrimitive::from_int(i).unwrap());
+        for i in range_inclusive(1, n) {
+            nums.push(FromPrimitive::from_uint(i).unwrap());
         }
         b.iter(|| {
             let mut res: Bsdnt = One::one();
             for n in nums.iter() {
                 res = res * *n;
             }
-            black_box(res);
+            extra::test::black_box(res);
         });
+    }
+
+    #[bench]
+    fn bench_factorial150(b: &mut extra::test::BenchHarness) {
+        do_bench_fac(150, b);
+    }
+
+    #[bench]
+    fn bench_factorial5000(b: &mut extra::test::BenchHarness) {
+        do_bench_fac(5000, b);
     }
 
     #[bench]
     fn bench_gcd_big_small(b: &mut extra::test::BenchHarness) {
         let x: Bsdnt = from_str(bignum).unwrap();
         let y: Bsdnt = from_str("19").unwrap();
-        b.iter(|| { black_box(x.gcd(&y)); });
+        b.iter(|| { extra::test::black_box(x.gcd(&y)); });
     }
 
     #[bench]
     fn bench_lcm_big_small(b: &mut extra::test::BenchHarness) {
         let x: Bsdnt = from_str(bignum).unwrap();
         let y: Bsdnt = from_str("19").unwrap();
-        b.iter(|| { black_box(x.lcm(&y)); });
+        b.iter(|| { extra::test::black_box(x.lcm(&y)); });
     }
 
     #[bench]
     fn bench_from_str(b: &mut extra::test::BenchHarness) {
         b.iter(|| {
             let n = from_str::<Bsdnt>(bignum);
-            black_box(n);
+            extra::test::black_box(n);
         });
     }
 }
