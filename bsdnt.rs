@@ -144,21 +144,6 @@ impl Ord for Bsdnt {
     }
 }
 
-// This is pretty bad
-impl Orderable for Bsdnt {
-    fn min(&self, other: &Bsdnt) -> Bsdnt {
-        if self < other { self } else { other }.clone()
-    }
-
-    fn max(&self, other: &Bsdnt) -> Bsdnt {
-        if self > other { self } else { other }.clone()
-    }
-
-    fn clamp(&self, min: &Bsdnt, max: &Bsdnt) -> Bsdnt {
-        if self < min { min } else if self > max { max } else { self }.clone()
-    }
-}
-
 impl Add<Bsdnt, Bsdnt> for Bsdnt {
     fn add(&self, other: &Bsdnt) -> Bsdnt { binop_new!(self other zz_add) }
 }
