@@ -591,7 +591,7 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    extern mod extra;
+    extern crate extra;
 
     use super::*;
     use std::iter::range_inclusive;
