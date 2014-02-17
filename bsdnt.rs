@@ -4,6 +4,8 @@
 
 use std::libc::{c_void, c_char, size_t, c_long, c_int};
 use std::num::{One, Zero};
+use std::fmt;
+use fmt::{Show, Formatter};
 use std::unstable::intrinsics::{uninit};
 
 #[cfg(target_word_size = "32")]
@@ -222,6 +224,12 @@ impl ToStr for Bsdnt {
             std::libc::free(cstr as *mut c_void);
             rstr
         }
+    }
+}
+
+impl Show for Bsdnt {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.buf.write_str(self.to_str())
     }
 }
 
