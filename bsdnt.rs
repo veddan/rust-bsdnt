@@ -1,12 +1,16 @@
 #[feature(macro_rules)];
 #[feature(globs)];
 #[feature(asm)];
+#[allow(non_camel_case_types)];
+
+extern crate num;
 
 use std::libc::{c_void, c_char, size_t, c_long, c_int};
-use std::num::{One, Zero};
+use std::num::{One, Zero, FromPrimitive};
+use num::{Integer};
 use std::fmt;
 use fmt::{Show, Formatter};
-use std::unstable::intrinsics::{uninit};
+use std::intrinsics::{uninit};
 
 #[cfg(target_word_size = "32")]
 type word_t = u32;
@@ -281,7 +285,7 @@ impl Integer for Bsdnt {
         }
     }
 
-    fn is_multiple_of(&self, other: &Bsdnt) -> bool {
+    fn divides(&self, other: &Bsdnt) -> bool {
         !other.is_zero() && (*self % *other).is_zero()
     }
 
@@ -369,8 +373,12 @@ impl Clone for Bsdnt {
 
 #[cfg(test)]
 mod test {
+    extern crate test;
+    extern crate num;
+
     use super::*;
-    use std::num::{Zero, One};  // Two, Three, ...}
+    use std::num::{Zero, One, FromPrimitive};
+    use num::{Integer};
 
     fn n(n: int) -> Bsdnt { FromPrimitive::from_int(n).unwrap() }
     fn s(s: &str) -> Bsdnt { from_str(s).unwrap() }
@@ -515,13 +523,13 @@ mod test {
     }
 
     #[test]
-    fn test_is_multiple_of() {
+    fn test_divides() {
         let x: Bsdnt = from_str("-9").unwrap();
         let y: Bsdnt = from_str("3").unwrap();
         let z: Bsdnt = from_str("7").unwrap();
-        assert!(x.is_multiple_of(&y));
-        assert!(!z.is_multiple_of(&y));
-        assert!(!z.is_multiple_of(&Zero::zero()));
+        assert!(x.divides(&y));
+        assert!(!z.divides(&y));
+        assert!(!z.divides(&Zero::zero()));
     }
 
     #[test]
@@ -599,11 +607,13 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    extern crate extra;
+    extern crate test;
+    extern crate num;
 
     use super::*;
     use std::iter::range_inclusive;
-    use std::num::{One};
+    use std::num::{One, FromPrimitive};
+    use num::{Integer};
 
     static bignum: &'static str = "347329483248324987312897398216945234732489236493274398127428913\
                                    382190389201839813919208390218903821093219038213128074395657862\
@@ -611,7 +621,7 @@ mod bench {
                                    312381290389201389021839021803821903892018437549835743897589347\
                                    43289483290489302849032753298573458943758974358974398578943759";
 
-    fn do_bench_fac(n: uint, b: &mut extra::test::BenchHarness) {
+    fn do_bench_fac(n: uint, b: &mut test::BenchHarness) {
         let mut nums: ~[Bsdnt] = ~[];
         for i in range_inclusive(1, n) {
             nums.push(FromPrimitive::from_uint(i).unwrap());
@@ -621,39 +631,36 @@ mod bench {
             for n in nums.iter() {
                 res = res * *n;
             }
-            extra::test::black_box(res);
+            res
         });
     }
 
     #[bench]
-    fn bench_factorial150(b: &mut extra::test::BenchHarness) {
+    fn bench_factorial150(b: &mut test::BenchHarness) {
         do_bench_fac(150, b);
     }
 
     #[bench]
-    fn bench_factorial5000(b: &mut extra::test::BenchHarness) {
+    fn bench_factorial5000(b: &mut test::BenchHarness) {
         do_bench_fac(5000, b);
     }
 
     #[bench]
-    fn bench_gcd_big_small(b: &mut extra::test::BenchHarness) {
+    fn bench_gcd_big_small(b: &mut test::BenchHarness) {
         let x: Bsdnt = from_str(bignum).unwrap();
         let y: Bsdnt = from_str("19").unwrap();
-        b.iter(|| { extra::test::black_box(x.gcd(&y)); });
+        b.iter(|| { x.gcd(&y) });
     }
 
     #[bench]
-    fn bench_lcm_big_small(b: &mut extra::test::BenchHarness) {
+    fn bench_lcm_big_small(b: &mut test::BenchHarness) {
         let x: Bsdnt = from_str(bignum).unwrap();
         let y: Bsdnt = from_str("19").unwrap();
-        b.iter(|| { extra::test::black_box(x.lcm(&y)); });
+        b.iter(|| { x.lcm(&y) });
     }
 
     #[bench]
-    fn bench_from_str(b: &mut extra::test::BenchHarness) {
-        b.iter(|| {
-            let n = from_str::<Bsdnt>(bignum);
-            extra::test::black_box(n);
-        });
+    fn bench_from_str(b: &mut test::BenchHarness) {
+        b.iter(|| { from_str::<Bsdnt>(bignum) });
     }
 }
