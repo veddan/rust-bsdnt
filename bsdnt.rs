@@ -5,12 +5,14 @@
 
 extern crate num;
 
-use std::libc::{c_void, c_char, size_t, c_long, c_int};
+use std::libc::{c_char, size_t, c_long, c_int};
 use std::num::{One, Zero, FromPrimitive};
-use num::{Integer};
+use num::Integer;
 use std::fmt;
 use fmt::{Show, Formatter};
-use std::intrinsics::{uninit};
+use std::mem::uninit;
+use std::c_str::CString;
+use std::from_str::FromStr;
 
 #[cfg(target_word_size = "32")]
 type word_t = u32;
@@ -220,20 +222,15 @@ impl Signed for Bsdnt {
     }
 }
 
-impl ToStr for Bsdnt {
-    fn to_str(&self) -> ~str {
-        unsafe {
-            let cstr = zz_get_str(&self.zz);
-            let rstr = std::str::raw::from_c_str(cstr as *c_char);
-            std::libc::free(cstr as *mut c_void);
-            rstr
-        }
-    }
-}
-
 impl Show for Bsdnt {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        f.buf.write_str(self.to_str())
+        unsafe {
+            let cstr = CString::new(zz_get_str(&self.zz) as *i8, true);
+            for c in cstr.iter() {
+                try!(f.buf.write_u8(c as u8));
+            }
+        }
+        Ok(())
     }
 }
 
@@ -378,7 +375,7 @@ mod test {
 
     use super::*;
     use std::num::{Zero, One, FromPrimitive};
-    use num::{Integer};
+    use num::Integer;
 
     fn n(n: int) -> Bsdnt { FromPrimitive::from_int(n).unwrap() }
     fn s(s: &str) -> Bsdnt { from_str(s).unwrap() }
@@ -613,7 +610,7 @@ mod bench {
     use super::*;
     use std::iter::range_inclusive;
     use std::num::{One, FromPrimitive};
-    use num::{Integer};
+    use num::Integer;
 
     static bignum: &'static str = "347329483248324987312897398216945234732489236493274398127428913\
                                    382190389201839813919208390218903821093219038213128074395657862\
