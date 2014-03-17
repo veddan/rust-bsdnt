@@ -376,6 +376,7 @@ mod test {
     use super::*;
     use std::num::{Zero, One, FromPrimitive};
     use num::Integer;
+    use std::vec_ng::Vec;
 
     fn n(n: int) -> Bsdnt { FromPrimitive::from_int(n).unwrap() }
     fn s(s: &str) -> Bsdnt { from_str(s).unwrap() }
@@ -564,7 +565,7 @@ mod test {
 
     #[test]  // Fails due to bug in BSDNT (https://github.com/wbhart/bsdnt/issues/10)
     fn test_div_rem_floor() {
-        let xs = ~[
+        let xs = Vec::from_slice(&[
             (n(8),  n(3),  n(2),  n(2)),
             (n(8),  n(-3), n(-3), n(-1)),
             (n(-8), n(3),  n(-3), n(1)),
@@ -573,7 +574,7 @@ mod test {
             (n(1),  n(-2), n(-1), n(-1)),
             (n(-1), n(2),  n(-1), n(1)),
             (n(-1), n(-2), n(0),  n(-1)),
-        ];
+        ]);
         for (div, den, quot, rem) in xs.move_iter() {
             let expected = (quot, rem);
             asserteq!(&div.div_rem(&den), &expected,
@@ -583,7 +584,7 @@ mod test {
 
     #[test]
     fn test_div_rem() {
-        let xs = ~[
+        let xs = Vec::from_slice(&[
             (n(8),  n(3),  n(2),  n(2)),
             (n(8),  n(-3), n(-2), n(2)),
             (n(-8), n(3),  n(-2), n(-2)),
@@ -593,7 +594,7 @@ mod test {
             (n(-1), n(2),  n(0),  n(-1)),
             (n(-1), n(-2), n(0),  n(-1)),
             (s("18446744073709551617"), n(-0x100000), n(-17592186044416),n(1))
-        ];
+        ]);
         for (div, den, quot, rem) in xs.move_iter() {
             let expected = (quot, rem);
             asserteq!(&div.div_rem(&den), &expected,
@@ -611,6 +612,7 @@ mod bench {
     use std::iter::range_inclusive;
     use std::num::{One, FromPrimitive};
     use num::Integer;
+    use std::vec_ng::Vec;
 
     static bignum: &'static str = "347329483248324987312897398216945234732489236493274398127428913\
                                    382190389201839813919208390218903821093219038213128074395657862\
@@ -619,7 +621,7 @@ mod bench {
                                    43289483290489302849032753298573458943758974358974398578943759";
 
     fn do_bench_fac(n: uint, b: &mut test::BenchHarness) {
-        let mut nums: ~[Bsdnt] = ~[];
+        let mut nums = Vec::new();
         for i in range_inclusive(1, n) {
             nums.push(FromPrimitive::from_uint(i).unwrap());
         }
