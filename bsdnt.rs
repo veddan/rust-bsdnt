@@ -1,7 +1,6 @@
-#[feature(macro_rules)];
-#[feature(globs)];
-#[feature(asm)];
-#[allow(non_camel_case_types)];
+#![feature(macro_rules)]
+#![feature(globs)]
+#![allow(non_camel_case_types)]
 
 extern crate num;
 
@@ -45,7 +44,7 @@ type zz_srcptr = *zz_struct;
 
 #[link(name = "bsdnt")]
 extern "C" {
-    #[allow(dead_code)];
+    #![allow(dead_code)]
 
     fn nn_cmp_m(a: nn_src_t, b: nn_src_t, m: len_t) -> c_int;
 
@@ -104,7 +103,7 @@ macro_rules! binop_new(
 )
 
 pub struct Bsdnt {
-    priv zz: zz_struct
+    zz: zz_struct
 }
 
 impl Drop for Bsdnt {
@@ -376,7 +375,7 @@ mod test {
     use super::*;
     use std::num::{Zero, One, FromPrimitive};
     use num::Integer;
-    use std::vec_ng::Vec;
+    use std::vec::Vec;
 
     fn n(n: int) -> Bsdnt { FromPrimitive::from_int(n).unwrap() }
     fn s(s: &str) -> Bsdnt { from_str(s).unwrap() }
@@ -612,7 +611,7 @@ mod bench {
     use std::iter::range_inclusive;
     use std::num::{One, FromPrimitive};
     use num::Integer;
-    use std::vec_ng::Vec;
+    use std::vec::Vec;
 
     static bignum: &'static str = "347329483248324987312897398216945234732489236493274398127428913\
                                    382190389201839813919208390218903821093219038213128074395657862\
