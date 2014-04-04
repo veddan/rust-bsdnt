@@ -375,7 +375,6 @@ mod test {
     use super::*;
     use std::num::{Zero, One, FromPrimitive};
     use num::Integer;
-    use std::vec::Vec;
 
     fn n(n: int) -> Bsdnt { FromPrimitive::from_int(n).unwrap() }
     fn s(s: &str) -> Bsdnt { from_str(s).unwrap() }
@@ -611,7 +610,6 @@ mod bench {
     use std::iter::range_inclusive;
     use std::num::{One, FromPrimitive};
     use num::Integer;
-    use std::vec::Vec;
 
     static bignum: &'static str = "347329483248324987312897398216945234732489236493274398127428913\
                                    382190389201839813919208390218903821093219038213128074395657862\
