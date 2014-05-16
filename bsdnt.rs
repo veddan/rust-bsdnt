@@ -3,12 +3,13 @@
 #![allow(non_camel_case_types)]
 
 extern crate num;
+extern crate libc;
 
-use std::libc::{c_char, size_t, c_long, c_int};
+use libc::{c_char, size_t, c_long, c_int};
 use std::num::{One, Zero, FromPrimitive};
 use num::Integer;
 use std::fmt;
-use fmt::{Show, Formatter};
+use std::fmt::{Show, Formatter};
 use std::mem::uninit;
 use std::c_str::CString;
 use std::from_str::FromStr;
@@ -340,7 +341,7 @@ macro_rules! from_primitive(
         std::$int_ty::to_str_bytes($val, 10, |buf| {
             unsafe {
                 // `std::str::raw::from_utf8` doesn't inline, use `transmute` instead
-                let s = std::cast::transmute(buf);
+                let s = std::mem::transmute(buf);
                 FromStr::from_str(s)
             }
         })
@@ -617,7 +618,7 @@ mod bench {
                                    312381290389201389021839021803821903892018437549835743897589347\
                                    43289483290489302849032753298573458943758974358974398578943759";
 
-    fn do_bench_fac(n: uint, b: &mut test::BenchHarness) {
+    fn do_bench_fac(n: uint, b: &mut test::Bencher) {
         let mut nums = Vec::new();
         for i in range_inclusive(1, n) {
             nums.push(FromPrimitive::from_uint(i).unwrap());
@@ -632,31 +633,31 @@ mod bench {
     }
 
     #[bench]
-    fn bench_factorial150(b: &mut test::BenchHarness) {
+    fn bench_factorial150(b: &mut test::Bencher) {
         do_bench_fac(150, b);
     }
 
     #[bench]
-    fn bench_factorial5000(b: &mut test::BenchHarness) {
+    fn bench_factorial5000(b: &mut test::Bencher) {
         do_bench_fac(5000, b);
     }
 
     #[bench]
-    fn bench_gcd_big_small(b: &mut test::BenchHarness) {
+    fn bench_gcd_big_small(b: &mut test::Bencher) {
         let x: Bsdnt = from_str(bignum).unwrap();
         let y: Bsdnt = from_str("19").unwrap();
         b.iter(|| { x.gcd(&y) });
     }
 
     #[bench]
-    fn bench_lcm_big_small(b: &mut test::BenchHarness) {
+    fn bench_lcm_big_small(b: &mut test::Bencher) {
         let x: Bsdnt = from_str(bignum).unwrap();
         let y: Bsdnt = from_str("19").unwrap();
         b.iter(|| { x.lcm(&y) });
     }
 
     #[bench]
-    fn bench_from_str(b: &mut test::BenchHarness) {
+    fn bench_from_str(b: &mut test::Bencher) {
         b.iter(|| { from_str::<Bsdnt>(bignum) });
     }
 }
