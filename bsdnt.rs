@@ -10,7 +10,7 @@ use std::num::{One, Zero, FromPrimitive};
 use num::Integer;
 use std::fmt;
 use std::fmt::{Show, Formatter};
-use std::mem::uninit;
+use std::mem::uninitialized;
 use std::c_str::CString;
 use std::from_str::FromStr;
 
@@ -37,7 +37,7 @@ type nn_src_t = *word_t;
 struct zz_struct {
     n: nn_t,
     size: len_t,
-    alloc: len_t
+    _alloc: len_t
 }
 
 type zz_ptr = *mut zz_struct;
@@ -114,7 +114,7 @@ impl Drop for Bsdnt {
 impl Bsdnt {
     pub fn new() -> Bsdnt {
         unsafe {
-            let mut zz = uninit();
+            let mut zz = uninitialized();
             zz_init(&mut zz);
             Bsdnt { zz: zz }
         }
@@ -122,7 +122,7 @@ impl Bsdnt {
 
     pub fn new_reserve(words: uint) -> Bsdnt {
         unsafe {
-            let mut zz = uninit();
+            let mut zz = uninitialized();
             zz_init_fit(&mut zz, words as len_t);
             Bsdnt { zz: zz }
         }
@@ -139,16 +139,31 @@ impl Bsdnt {
 
 }
 
-impl Eq for Bsdnt {
+impl Eq for Bsdnt { }
+
+impl PartialEq for Bsdnt {
     fn eq(&self, other: &Bsdnt) -> bool {
         unsafe { return zz_equal(&self.zz, &other.zz); }
     }
 }
 
-impl Ord for Bsdnt {
+impl PartialOrd for Bsdnt {
     fn lt(&self, other: &Bsdnt) -> bool {
         let cmp = unsafe { zz_cmp(&self.zz, &other.zz) };
         cmp < 0
+    }
+}
+
+impl Ord for Bsdnt {
+    fn cmp(&self, other: &Bsdnt) -> Ordering {
+        let cmp = unsafe { zz_cmp(&self.zz, &other.zz) };
+        if cmp == 0 {
+            Equal
+        } else if cmp > 0 {
+            Greater
+        } else {
+            Less
+        }
     }
 }
 
@@ -226,9 +241,8 @@ impl Show for Bsdnt {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         unsafe {
             let cstr = CString::new(zz_get_str(&self.zz) as *i8, true);
-            for c in cstr.iter() {
-                try!(f.buf.write_u8(c as u8));
-            }
+            // Use .init() to drop trailing zero byte
+            try!(f.write(cstr.as_bytes().init()));
         }
         Ok(())
     }
@@ -470,7 +484,7 @@ mod test {
     fn test_neg() {
         let x: Bsdnt = from_str("32982908").unwrap();
         let y: Bsdnt = from_str("-32982908").unwrap();
-        assert!(x.neg() == y);
+        assert_eq!(x.neg(), y);
     }
 
     #[test]
@@ -496,27 +510,27 @@ mod test {
         let x: Bsdnt = FromPrimitive::from_i64(4).unwrap();
         let y: Bsdnt = FromPrimitive::from_i64(6).unwrap();
         let z: Bsdnt = FromPrimitive::from_i64(12).unwrap();
-        assert!(x.lcm(&y) == z);
+        assert_eq!(x.lcm(&y), z);
 
         let p: Bsdnt = FromPrimitive::from_i64(-5).unwrap();
         let q: Bsdnt = FromPrimitive::from_i64(2).unwrap();
         let r: Bsdnt = FromPrimitive::from_i64(10).unwrap();
-        assert!(p.lcm(&q) == r);
+        assert_eq!(p.lcm(&q), r);
     }
 
     #[test]
     fn test_gcd() {
         let x: Bsdnt = FromPrimitive::from_i64(163231).unwrap();
         let y: Bsdnt = FromPrimitive::from_i64(135749).unwrap();
-        assert!(x.gcd(&y) == FromPrimitive::from_i64(151).unwrap());
+        assert_eq!(x.gcd(&y), FromPrimitive::from_i64(151).unwrap());
     }
 
     #[test]
     fn test_abs() {
         let x: Bsdnt = from_str("32982908").unwrap();
         let y: Bsdnt = from_str("-32982908").unwrap();
-        assert!(x == x.abs());
-        assert!(x == y.abs());
+        assert_eq!(x, x.abs());
+        assert_eq!(x, y.abs());
     }
 
     #[test]
@@ -537,29 +551,32 @@ mod test {
         let x: Bsdnt = from_str(a).unwrap();
         let y: Bsdnt = from_str(b).unwrap();
         let z: Bsdnt = from_str(c).unwrap();
-        assert!(a == x.to_str());
-        assert!(b == y.to_str());
-        assert!(c == z.to_str());
+        assert_eq!(a, x.to_str().as_slice());
+        assert_eq!(b, y.to_str().as_slice());
+        assert_eq!(c, z.to_str().as_slice());
     }
 
     #[test]
     fn test_from_primitive() {
         let a: i64 = 9223372036854775807;
-        let b = "9223372036854775807";
+        let b     = "9223372036854775807";
         let x: Bsdnt = FromPrimitive::from_i64(a).unwrap();
         let y: Bsdnt = from_str(b).unwrap();
-        assert!(x == y);
-        assert!(b == x.to_str());
+        assert_eq!(x, y);
+        assert_eq!(b, x.to_str().as_slice());
     }
 
     #[test]
     fn test_from_u64() {
         let a: u64 = 18446744073709551615;
-        let b = "18446744073709551615";
+        let b     = "18446744073709551615";
         let x: Bsdnt = FromPrimitive::from_u64(a).unwrap();
         let y: Bsdnt = from_str(b).unwrap();
-        assert!(x == y);
-        assert!(b == x.to_str());
+        assert_eq!(x, y);
+        //assert_eq!(b.as_slice(), x.to_str().as_slice());
+        let foo = "hej";
+        let bar = String::from_str(foo);
+        assert_eq!(foo.as_slice(), bar.as_slice());
     }
 
     #[test]  // Fails due to bug in BSDNT (https://github.com/wbhart/bsdnt/issues/10)
