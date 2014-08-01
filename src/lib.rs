@@ -32,7 +32,7 @@ type sword_t = c_long;
 type bits_t = c_long;
 
 type nn_t = *mut word_t;
-type nn_src_t = *word_t;
+type nn_src_t = *const word_t;
 
 struct zz_struct {
     n: nn_t,
@@ -41,7 +41,7 @@ struct zz_struct {
 }
 
 type zz_ptr = *mut zz_struct;
-type zz_srcptr = *zz_struct;
+type zz_srcptr = *const zz_struct;
 
 #[link(name = "bsdnt")]
 extern "C" {
@@ -80,7 +80,7 @@ extern "C" {
 
     fn zz_gcd(g: zz_ptr, a: zz_srcptr, b: zz_srcptr);
 
-    fn zz_set_str(a: zz_ptr, s: *c_char) -> size_t;
+    fn zz_set_str(a: zz_ptr, s: *const c_char) -> size_t;
     fn zz_get_str(a: zz_srcptr) -> *mut c_char;
     fn zz_print(a: zz_srcptr);
 
@@ -139,30 +139,26 @@ impl Bsdnt {
 
 }
 
-impl Eq for Bsdnt { }
-
 impl PartialEq for Bsdnt {
     fn eq(&self, other: &Bsdnt) -> bool {
-        unsafe { return zz_equal(&self.zz, &other.zz); }
+        unsafe { zz_equal(&self.zz, &other.zz) }
     }
 }
 
+impl Eq for Bsdnt {}
+
 impl PartialOrd for Bsdnt {
-    fn lt(&self, other: &Bsdnt) -> bool {
-        let cmp = unsafe { zz_cmp(&self.zz, &other.zz) };
-        cmp < 0
+    fn partial_cmp(&self, other: &Bsdnt) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for Bsdnt {
     fn cmp(&self, other: &Bsdnt) -> Ordering {
-        let cmp = unsafe { zz_cmp(&self.zz, &other.zz) };
-        if cmp == 0 {
-            Equal
-        } else if cmp > 0 {
-            Greater
-        } else {
-            Less
+        match unsafe { zz_cmp(&self.zz, &other.zz) } {
+            0 => Equal,
+            n if n > 0 => Greater,
+            _ => Less
         }
     }
 }
@@ -240,7 +236,7 @@ impl Signed for Bsdnt {
 impl Show for Bsdnt {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         unsafe {
-            let cstr = CString::new(zz_get_str(&self.zz) as *i8, true);
+            let cstr = CString::new(zz_get_str(&self.zz) as *const i8, true);
             // Use .init() to drop trailing zero byte
             try!(f.write(cstr.as_bytes().init()));
         }
@@ -296,8 +292,12 @@ impl Integer for Bsdnt {
         }
     }
 
-    fn divides(&self, other: &Bsdnt) -> bool {
+    fn is_multiple_of(&self, other: &Bsdnt) -> bool {
         !other.is_zero() && (*self % *other).is_zero()
+    }
+
+    fn divides(&self, other: &Bsdnt) -> bool {
+        self.is_multiple_of(other)
     }
 
     fn is_even(&self) -> bool {
@@ -398,7 +398,7 @@ mod test {
         ($actual:expr, $expected:expr, $message:expr) => (
             if $expected != $actual {
                 fail!("{}: expected `{}`, got `{}`", $message,
-                      $expected.to_str(), $actual.to_str());
+                      $expected.to_string(), $actual.to_string());
             }
         )
     )
@@ -544,16 +544,16 @@ mod test {
     }
 
     #[test]
-    fn test_to_str() {
+    fn test_to_string() {
         let a = "32982908";
         let b = "-32982908";
         let c = "0";
         let x: Bsdnt = from_str(a).unwrap();
         let y: Bsdnt = from_str(b).unwrap();
         let z: Bsdnt = from_str(c).unwrap();
-        assert_eq!(a, x.to_str().as_slice());
-        assert_eq!(b, y.to_str().as_slice());
-        assert_eq!(c, z.to_str().as_slice());
+        assert_eq!(a, x.to_string().as_slice());
+        assert_eq!(b, y.to_string().as_slice());
+        assert_eq!(c, z.to_string().as_slice());
     }
 
     #[test]
@@ -563,7 +563,7 @@ mod test {
         let x: Bsdnt = FromPrimitive::from_i64(a).unwrap();
         let y: Bsdnt = from_str(b).unwrap();
         assert_eq!(x, y);
-        assert_eq!(b, x.to_str().as_slice());
+        assert_eq!(b, x.to_string().as_slice());
     }
 
     #[test]
@@ -573,13 +573,14 @@ mod test {
         let x: Bsdnt = FromPrimitive::from_u64(a).unwrap();
         let y: Bsdnt = from_str(b).unwrap();
         assert_eq!(x, y);
-        //assert_eq!(b.as_slice(), x.to_str().as_slice());
+        //assert_eq!(b.as_slice(), x.to_string().as_slice());
         let foo = "hej";
         let bar = String::from_str(foo);
         assert_eq!(foo.as_slice(), bar.as_slice());
     }
 
-    #[test]  // Fails due to bug in BSDNT (https://github.com/wbhart/bsdnt/issues/10)
+    #[test]
+    #[ignore] // Fails due to bug in BSDNT (https://github.com/wbhart/bsdnt/issues/10)
     fn test_div_rem_floor() {
         let xs = Vec::from_slice(&[
             (n(8),  n(3),  n(2),  n(2)),
@@ -594,7 +595,7 @@ mod test {
         for (div, den, quot, rem) in xs.move_iter() {
             let expected = (quot, rem);
             asserteq!(&div.div_rem(&den), &expected,
-                      format!("{} / {}", div.to_str(), den.to_str()));
+                      format!("{} / {}", div.to_string(), den.to_string()));
         }
     }
 
@@ -614,7 +615,7 @@ mod test {
         for (div, den, quot, rem) in xs.move_iter() {
             let expected = (quot, rem);
             asserteq!(&div.div_rem(&den), &expected,
-                      format!("{} / {}", div.to_str(), den.to_str()));
+                      format!("{} / {}", div.to_string(), den.to_string()));
         }
     }
 }
