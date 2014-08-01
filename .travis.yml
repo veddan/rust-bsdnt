@@ -1,14 +1,15 @@
-before_install:
-  - yes | sudo add-apt-repository ppa:hansjorg/rust
-  - sudo apt-get update
+env:
+  global:
+    - LD_LIBRARY_PATH=/usr/local/lib
 install:
-  - sudo apt-get install rust-nightly
+  - curl http://www.rust-lang.org/rustup.sh | sudo sh -
   - git clone https://github.com/wbhart/bsdnt.git bsdnt-git
   - cd bsdnt-git
-  - git checkout origin/v1.0
   - ./configure
   - make
+  - sudo make install
   - cd ..
 script:
-  - rustc bsdnt.rs --test -L bsdnt-git
-  - RUST_THREADS=1 LD_LIBRARY_PATH=bsdnt-git ./bsdnt --test
+  - cargo build
+  - cargo test
+  - cargo test -- --bench
