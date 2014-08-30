@@ -34,6 +34,7 @@ type bits_t = c_long;
 type nn_t = *mut word_t;
 type nn_src_t = *const word_t;
 
+#[repr(C)]
 struct zz_struct {
     n: nn_t,
     size: len_t,
@@ -387,7 +388,7 @@ mod test {
     extern crate test;
     extern crate num;
 
-    use super::*;
+    use super::Bsdnt;
     use std::num::{Zero, One, FromPrimitive};
     use num::Integer;
 
@@ -417,7 +418,7 @@ mod test {
         let mut x: Bsdnt = from_str("-31232313").unwrap();
         let y = x.clone();
         let z: Bsdnt = from_str("3000").unwrap();
-        assert!(x == y);
+        assert_eq!(x, y);
         x = x + z;
         assert!(x != y);
     }
@@ -456,8 +457,8 @@ mod test {
         let x = Bsdnt::new();
         let y: Bsdnt = from_str("0").unwrap();
         let z: Bsdnt = Zero::zero();
-        assert!(x == y);
-        assert!(z == y);
+        assert_eq!(x, y);
+        assert_eq!(z, y);
     }
 
     #[test]
@@ -625,7 +626,7 @@ mod bench {
     extern crate test;
     extern crate num;
 
-    use super::*;
+    use super::Bsdnt;
     use std::iter::range_inclusive;
     use std::num::{One, FromPrimitive};
     use num::Integer;
