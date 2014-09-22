@@ -2,7 +2,7 @@ env:
   global:
     - LD_LIBRARY_PATH=/usr/local/lib
 install:
-  - curl http://www.rust-lang.org/rustup.sh | sudo sh -
+  - curl https://static.rust-lang.org/rustup.sh | sudo bash
   - git clone https://github.com/wbhart/bsdnt.git bsdnt-git
   - cd bsdnt-git
   - ./configure
